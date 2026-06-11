@@ -1,10 +1,4 @@
 
-        - name: Build
-          working-directory: src-tauri
-          run: cargo build --release
-
-  完整 workflow 更新为：
-
   name: Build Portable (Windows)
   on:
     workflow_dispatch:
@@ -28,9 +22,29 @@
 
         - run: pnpm install --frozen-lockfile
 
+        - name: Prepare Tauri signing key
+          shell: bash
+          run: |
+            RAW="${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}"
+            KEY_PATH="$RUNNER_TEMP/tauri_signing.key"
+            if echo "$RAW" | head -n1 | grep -q '^untrusted comment:'; then
+              printf '%s\n' "$RAW" > "$KEY_PATH"
+            else
+              if DECODED=$(printf '%s' "$RAW" | base64 --decode 2>/dev/null) \
+                 && echo "$DECODED" | head -n1 | grep -q '^untrusted comment:'; then
+                printf '%s\n' "$DECODED" > "$KEY_PATH"
+              else
+                printf '%s\n%s\n' "untrusted comment: tauri signing key" "$(echo "$RAW" | tr -d '\r\n')" > "$KEY_PATH"
+              fi
+            fi
+            KEY_B64=$(base64 < "$KEY_PATH" | tr -d '\r\n')
+            echo "TAURI_SIGNING_PRIVATE_KEY=$KEY_B64" >> "$GITHUB_ENV"
+            if [ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}" ]; then
+              echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+            fi
+
         - name: Build
-          working-directory: src-tauri
-          run: cargo build --release
+          run: pnpm tauri build
 
         - name: Package portable zip
           shell: pwsh
