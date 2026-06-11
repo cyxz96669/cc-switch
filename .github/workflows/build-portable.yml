@@ -24,9 +24,6 @@
 
         - name: Build
           run: pnpm tauri build
-          env:
-            TAURI_SIGNING_PRIVATE_KEY: ""
-            TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
 
         - name: Package portable zip
           shell: pwsh
@@ -37,8 +34,7 @@
               $portableDir = 'release-assets/CC-Switch-Portable'
               New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
               Copy-Item $exePath $portableDir
-              $portableContent = @('# CC Switch portable build marker', 'portable=true')
-              $portableContent | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
+              @('# CC Switch portable build marker', 'portable=true') | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
               Compress-Archive -Path "$portableDir/*" -DestinationPath 'release-assets/CC-Switch-dev-Windows-Portable.zip' -Force
               Write-Host "Portable zip created"
             } else {
