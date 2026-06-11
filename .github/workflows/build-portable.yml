@@ -1,4 +1,10 @@
 
+        - name: Build
+          working-directory: src-tauri
+          run: cargo build --release
+
+  完整 workflow 更新为：
+
   name: Build Portable (Windows)
   on:
     workflow_dispatch:
@@ -23,7 +29,8 @@
         - run: pnpm install --frozen-lockfile
 
         - name: Build
-          run: pnpm tauri build
+          working-directory: src-tauri
+          run: cargo build --release
 
         - name: Package portable zip
           shell: pwsh
