@@ -1,0 +1,51 @@
+
+  name: Build Portable (Windows)
+  on:
+    workflow_dispatch:
+
+  jobs:
+    build:
+      runs-on: windows-2022
+      steps:
+        - uses: actions/checkout@v6
+
+        - uses: actions/setup-node@v6
+          with:
+            node-version: '20'
+
+        - uses: dtolnay/rust-toolchain@stable
+
+        - uses: pnpm/action-setup@v6
+          with:
+            version: 10.12.3
+            run_install: false
+
+        - run: pnpm install --frozen-lockfile
+
+        - name: Build
+          run: pnpm tauri build
+          env:
+            TAURI_SIGNING_PRIVATE_KEY: ""
+            TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+        - name: Package portable zip
+          shell: pwsh
+          run: |
+            New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+            $exePath = 'src-tauri/target/release/cc-switch.exe'
+            if (Test-Path $exePath) {
+              $portableDir = 'release-assets/CC-Switch-Portable'
+              New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+              Copy-Item $exePath $portableDir
+              $portableContent = @('# CC Switch portable build marker', 'portable=true')
+              $portableContent | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
+              Compress-Archive -Path "$portableDir/*" -DestinationPath 'release-assets/CC-Switch-dev-Windows-Portable.zip' -Force
+              Write-Host "Portable zip created"
+            } else {
+              Write-Error 'cc-switch.exe not found'
+            }
+
+        - uses: actions/upload-artifact@v7
+          with:
+            name: cc-switch-portable
+            path: release-assets/CC-Switch-dev-Windows-Portable.zip
